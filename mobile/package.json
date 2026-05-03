@@ -1,0 +1,43 @@
+{
+  "name": "unified-student-mobile",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "android": "react-native run-android",
+    "ios": "react-native run-ios",
+    "start": "react-native start",
+    "test": "jest",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "18.2.0",
+    "react-native": "0.72.0",
+    "@react-navigation/native": "^6.1.0",
+    "@react-navigation/bottom-tabs": "^6.5.0",
+    "@react-navigation/stack": "^6.3.0",
+    "react-native-screens": "^3.24.0",
+    "react-native-safe-area-context": "^4.7.0",
+    "react-native-gesture-handler": "^2.14.0",
+    "axios": "^1.6.0",
+    "zustand": "^4.4.0",
+    "react-hook-form": "^7.48.0",
+    "react-native-vector-icons": "^10.0.0",
+    "react-native-reanimated": "^3.5.0",
+    "react-native-toast-message": "^2.1.0",
+    "react-native-camera": "^4.2.0",
+    "react-native-biometrics": "^3.0.1",
+    "react-native-push-notification": "^8.1.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.23.0",
+    "@babel/preset-react": "^7.23.0",
+    "@babel/preset-typescript": "^7.23.0",
+    "@react-native-community/eslint-config": "^3.2.0",
+    "@testing-library/react-native": "^12.0.0",
+    "@types/jest": "^29.5.0",
+    "@types/react-native": "^0.72.0",
+    "typescript": "^5.3.0",
+    "jest": "^29.7.0"
+  }
+}

@@ -1,0 +1,182 @@
+{
+  "name": "Engagement Campaign Automation",
+  "description": "Automated engagement campaigns based on user segments and behavior",
+  "nodes": [
+    {
+      "name": "Daily Trigger",
+      "type": "cron",
+      "schedule": "0 9 * * *",
+      "timezone": "Asia/Kolkata",
+      "description": "Runs daily at 9 AM IST"
+    },
+    {
+      "name": "Get User Segments",
+      "type": "http",
+      "method": "GET",
+      "url": "http://localhost:8000/api/growth/segment-analysis",
+      "headers": {
+        "Authorization": "Bearer {{ $env.API_TOKEN }}"
+      },
+      "query": {
+        "segment": "all",
+        "limit": 1000
+      }
+    },
+    {
+      "name": "Split by Segment",
+      "type": "switch",
+      "condition": "{{ $item().engagement_segment }}",
+      "cases": [
+        {
+          "name": "Hot Leads",
+          "condition": "== 'hot'"
+        },
+        {
+          "name": "Warm Leads",
+          "condition": "== 'warm'"
+        },
+        {
+          "name": "Cold Leads",
+          "condition": "== 'cold'"
+        },
+        {
+          "name": "Dormant Users",
+          "condition": "== 'dormant'"
+        }
+      ]
+    },
+    {
+      "name": "Send Hot Lead Campaign",
+      "type": "sendgrid",
+      "action": "send_email_batch",
+      "input": {
+        "recipients": "{{ $node['Get User Segments'].json.hot_leads }}",
+        "templateId": "hot_lead_action_required",
+        "dynamicData": {
+          "firstName": "{{ item.first_name }}",
+          "recommendedAction": "Complete your loan application",
+          "cta": "Apply Now"
+        },
+        "sendAt": "{{ new Date().setHours(10, 0, 0, 0) }}"
+      }
+    },
+    {
+      "name": "Send Warm Lead Nurture",
+      "type": "sendgrid",
+      "action": "send_email_batch",
+      "input": {
+        "recipients": "{{ $node['Get User Segments'].json.warm_leads }}",
+        "templateId": "warm_lead_educational_content",
+        "dynamicData": {
+          "firstName": "{{ item.first_name }}",
+          "contentType": "course_guide",
+          "courseRecommendation": "{{ item.top_recommended_course }}"
+        },
+        "sendAt": "{{ new Date().setHours(14, 0, 0, 0) }}"
+      }
+    },
+    {
+      "name": "Send Cold Lead Awareness",
+      "type": "sendgrid",
+      "action": "send_email_batch",
+      "input": {
+        "recipients": "{{ $node['Get User Segments'].json.cold_leads }}",
+        "templateId": "cold_lead_awareness_series",
+        "dynamicData": {
+          "firstName": "{{ item.first_name }}",
+          "contentType": "success_story",
+          "story": "How students like you achieved their dreams"
+        },
+        "sendAt": "{{ new Date().setHours(18, 0, 0, 0) }}"
+      }
+    },
+    {
+      "name": "Reactivate Dormant Users",
+      "type": "sendgrid",
+      "action": "send_email_batch",
+      "condition": "{{ $node['Get User Segments'].json.dormant_users.length > 0 }}",
+      "input": {
+        "recipients": "{{ $node['Get User Segments'].json.dormant_users }}",
+        "templateId": "win_back_campaign",
+        "dynamicData": {
+          "firstName": "{{ item.first_name }}",
+          "offer": "Special 20% discount on first month",
+          "newFeatures": ["AI Course Matcher", "Live Chat Support", "Mobile App"]
+        },
+        "sendAt": "{{ new Date().setHours(19, 0, 0, 0) }}"
+      }
+    },
+    {
+      "name": "Trigger SMS for Hot Leads",
+      "type": "twilio",
+      "action": "send_sms",
+      "condition": "{{ $node['Get User Segments'].json.hot_leads.length > 0 }}",
+      "input": {
+        "to": "{{ item.phone_number }}",
+        "message": "Hi {{ item.first_name }}! Complete your loan app now. Get approved in 24hrs. Reply HELP for support.",
+        "media": "{{ item.offer_image_url }}"
+      }
+    },
+    {
+      "name": "Send Push Notifications",
+      "type": "firebase",
+      "action": "send_notification",
+      "input": {
+        "to": "{{ item.user_id }}",
+        "title": "{{ $node['Split by Segment'].output.title }}",
+        "body": "{{ $node['Split by Segment'].output.body }}",
+        "data": {
+          "deepLink": "{{ $node['Split by Segment'].output.deepLink }}"
+        }
+      }
+    },
+    {
+      "name": "Update Last Contact",
+      "type": "supabase",
+      "action": "update",
+      "table": "users",
+      "input": {
+        "lastCampaignSent": "{{ new Date().toISOString() }}",
+        "lastCampaignType": "{{ $node['Split by Segment'].name }}",
+        "engagementScore": "{{ item.engagement_score }}"
+      },
+      "condition": "{{ item.user_id }}"
+    },
+    {
+      "name": "Log Campaign Metrics",
+      "type": "supabase",
+      "action": "insert",
+      "table": "campaign_logs",
+      "input": {
+        "campaignDate": "{{ new Date().toISOString() }}",
+        "hotLeadsSent": "{{ $node['Get User Segments'].json.hot_leads.length }}",
+        "warmLeadsSent": "{{ $node['Get User Segments'].json.warm_leads.length }}",
+        "coldLeadsSent": "{{ $node['Get User Segments'].json.cold_leads.length }}",
+        "dormantReactivated": "{{ $node['Get User Segments'].json.dormant_users.length }}",
+        "totalEngaged": "{{ $node['Get User Segments'].json.hot_leads.length + $node['Get User Segments'].json.warm_leads.length }}"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "from": "Daily Trigger",
+      "to": "Get User Segments"
+    },
+    {
+      "from": "Get User Segments",
+      "to": ["Split by Segment"]
+    },
+    {
+      "from": "Split by Segment",
+      "to": ["Send Hot Lead Campaign", "Send Warm Lead Nurture", "Send Cold Lead Awareness", "Reactivate Dormant Users"]
+    },
+    {
+      "from": ["Send Hot Lead Campaign", "Send Warm Lead Nurture", "Send Cold Lead Awareness"],
+      "to": ["Trigger SMS for Hot Leads", "Send Push Notifications", "Update Last Contact"]
+    },
+    {
+      "from": ["Update Last Contact", "Trigger SMS for Hot Leads"],
+      "to": "Log Campaign Metrics"
+    }
+  ]
+}

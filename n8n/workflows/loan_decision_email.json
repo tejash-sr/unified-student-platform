@@ -1,0 +1,121 @@
+{
+  "name": "Loan Decision Email Campaign",
+  "description": "Send loan offer emails based on eligibility score",
+  "nodes": [
+    {
+      "name": "Trigger - Loan Pre-Qualified",
+      "type": "webhook",
+      "webhookUrl": "http://localhost:8000/api/webhooks/loan-prequalified",
+      "events": ["loan.pre_qualified"],
+      "output": {
+        "loanId": "$.loan_id",
+        "userId": "$.user_id",
+        "score": "$.eligibility_score",
+        "approvedAmount": "$.approved_amount",
+        "interestRate": "$.interest_rate"
+      }
+    },
+    {
+      "name": "Check Eligibility Tier",
+      "type": "switch",
+      "condition": "{{ $node['Trigger - Loan Pre-Qualified'].json.score }}",
+      "cases": [
+        {
+          "name": "Hot Lead (75+)",
+          "condition": ">= 75"
+        },
+        {
+          "name": "Warm Lead (60-74)",
+          "condition": ">= 60 && < 75"
+        },
+        {
+          "name": "Cold Lead (<60)",
+          "condition": "< 60"
+        }
+      ]
+    },
+    {
+      "name": "Get User Details",
+      "type": "http",
+      "method": "GET",
+      "url": "http://localhost:8000/api/users/profile",
+      "headers": {
+        "Authorization": "Bearer {{ $env.API_TOKEN }}"
+      }
+    },
+    {
+      "name": "Send Hot Lead Offer",
+      "type": "sendgrid",
+      "condition": "{{ $node['Check Eligibility Tier'].name == 'Hot Lead (75+)' }}",
+      "action": "send_email",
+      "input": {
+        "to": "{{ $node['Get User Details'].json.email }}",
+        "templateId": "loan_offer_premium",
+        "dynamicTemplateData": {
+          "firstName": "{{ $node['Get User Details'].json.first_name }}",
+          "amount": "₹{{ ($node['Trigger - Loan Pre-Qualified'].json.approvedAmount / 100000).toFixed(0) }}L",
+          "rate": "{{ $node['Trigger - Loan Pre-Qualified'].json.interestRate }}%",
+          "emi": "{{ $node['Trigger - Loan Pre-Qualified'].json.monthly_emi }}",
+          "ctaLink": "https://app.studepath.io/dashboard/loans/{{ $node['Trigger - Loan Pre-Qualified'].json.loanId }}"
+        }
+      }
+    },
+    {
+      "name": "Send Warm Lead Education",
+      "type": "sendgrid",
+      "condition": "{{ $node['Check Eligibility Tier'].name == 'Warm Lead (60-74)' }}",
+      "action": "send_email",
+      "input": {
+        "to": "{{ $node['Get User Details'].json.email }}",
+        "templateId": "loan_education_nurture",
+        "dynamicTemplateData": {
+          "firstName": "{{ $node['Get User Details'].json.first_name }}",
+          "score": "{{ $node['Trigger - Loan Pre-Qualified'].json.score }}",
+          "recommendations": "Improve your savings to get better rates"
+        }
+      }
+    },
+    {
+      "name": "Send Cold Lead Awareness",
+      "type": "sendgrid",
+      "condition": "{{ $node['Check Eligibility Tier'].name == 'Cold Lead (<60)' }}",
+      "action": "send_email",
+      "input": {
+        "to": "{{ $node['Get User Details'].json.email }}",
+        "templateId": "loan_awareness_campaign",
+        "dynamicTemplateData": {
+          "firstName": "{{ $node['Get User Details'].json.first_name }}",
+          "improvements": ["Increase work experience", "Build savings", "Improve academic profile"]
+        }
+      }
+    },
+    {
+      "name": "Log to Analytics",
+      "type": "supabase",
+      "action": "insert",
+      "table": "loan_email_campaigns",
+      "input": {
+        "loanId": "{{ $node['Trigger - Loan Pre-Qualified'].json.loanId }}",
+        "userId": "{{ $node['Trigger - Loan Pre-Qualified'].json.userId }}",
+        "eligibilityScore": "{{ $node['Trigger - Loan Pre-Qualified'].json.score }}",
+        "tier": "{{ $node['Check Eligibility Tier'].name }}",
+        "emailSentAt": "{{ new Date().toISOString() }}",
+        "templateUsed": "{{ $node['Send Hot Lead Offer'].json.templateId || $node['Send Warm Lead Education'].json.templateId || $node['Send Cold Lead Awareness'].json.templateId }}"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "from": "Trigger - Loan Pre-Qualified",
+      "to": ["Check Eligibility Tier", "Get User Details"]
+    },
+    {
+      "from": "Check Eligibility Tier",
+      "to": ["Send Hot Lead Offer", "Send Warm Lead Education", "Send Cold Lead Awareness"]
+    },
+    {
+      "from": ["Send Hot Lead Offer", "Send Warm Lead Education", "Send Cold Lead Awareness"],
+      "to": "Log to Analytics"
+    }
+  ]
+}

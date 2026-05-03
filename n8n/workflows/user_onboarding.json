@@ -1,0 +1,87 @@
+{
+  "name": "User Onboarding Workflow",
+  "description": "Automated onboarding workflow for new users",
+  "nodes": [
+    {
+      "name": "Trigger - User Signup",
+      "type": "webhook",
+      "webhookUrl": "http://localhost:8000/api/webhooks/user-signup",
+      "events": ["user.created"],
+      "output": {
+        "userId": "$.user_id",
+        "email": "$.email",
+        "firstName": "$.first_name",
+        "degree": "$.current_degree"
+      }
+    },
+    {
+      "name": "Send Welcome Email",
+      "type": "sendgrid",
+      "action": "send_email",
+      "input": {
+        "to": "{{ $node['Trigger - User Signup'].json.email }}",
+        "from": "noreply@studepath.io",
+        "templateId": "welcome_email_v1",
+        "dynamicTemplateData": {
+          "firstName": "{{ $node['Trigger - User Signup'].json.firstName }}",
+          "signupDate": "{{ new Date().toISOString() }}",
+          "supportEmail": "support@studepath.io"
+        }
+      }
+    },
+    {
+      "name": "Call Growth Engine",
+      "type": "http",
+      "method": "POST",
+      "url": "http://localhost:8000/api/growth/analyze",
+      "headers": {
+        "Authorization": "Bearer {{ $env.API_TOKEN }}",
+        "Content-Type": "application/json"
+      },
+      "input": {
+        "userId": "{{ $node['Trigger - User Signup'].json.userId }}"
+      }
+    },
+    {
+      "name": "Create Profile Tasks",
+      "type": "mongodb",
+      "action": "insert",
+      "database": "studepath",
+      "collection": "onboarding_tasks",
+      "input": {
+        "userId": "{{ $node['Trigger - User Signup'].json.userId }}",
+        "tasks": [
+          "Complete Profile",
+          "Take Aptitude Test",
+          "Explore Top Courses",
+          "Check Loan Eligibility"
+        ],
+        "createdAt": "{{ new Date().toISOString() }}",
+        "status": "in_progress"
+      }
+    },
+    {
+      "name": "Schedule Follow-up Email",
+      "type": "schedule",
+      "scheduleTime": "2 hours",
+      "action": "send_email",
+      "input": {
+        "to": "{{ $node['Trigger - User Signup'].json.email }}",
+        "templateId": "profile_completion_nudge",
+        "dynamicTemplateData": {
+          "firstName": "{{ $node['Trigger - User Signup'].json.firstName }}"
+        }
+      }
+    }
+  ],
+  "connections": [
+    {
+      "from": "Trigger - User Signup",
+      "to": ["Send Welcome Email", "Call Growth Engine", "Create Profile Tasks"]
+    },
+    {
+      "from": "Create Profile Tasks",
+      "to": "Schedule Follow-up Email"
+    }
+  ]
+}

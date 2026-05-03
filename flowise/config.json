@@ -1,0 +1,214 @@
+{
+  "name": "StudePath AI Assistant",
+  "description": "AI-powered chatbot for student education guidance and loan assistance",
+  "version": "1.0.0",
+  "nodes": [
+    {
+      "id": "input_1",
+      "type": "CustomInput",
+      "label": "User Message",
+      "description": "Input from user chat",
+      "output": {
+        "message": "User's message text"
+      }
+    },
+    {
+      "id": "router_1",
+      "type": "RouterNode",
+      "label": "Intent Classification",
+      "description": "Route to different handlers based on intent",
+      "input": ["input_1"],
+      "routes": [
+        {
+          "intent": "course_recommendation",
+          "label": "Course Recommendation"
+        },
+        {
+          "intent": "loan_inquiry",
+          "label": "Loan Inquiry"
+        },
+        {
+          "intent": "roi_calculation",
+          "label": "ROI Calculation"
+        },
+        {
+          "intent": "general_info",
+          "label": "General Information"
+        }
+      ]
+    },
+    {
+      "id": "course_handler",
+      "type": "APICallNode",
+      "label": "Course Recommendation API",
+      "description": "Call backend course recommendation endpoint",
+      "input": ["router_1"],
+      "endpoint": "http://localhost:8000/api/recommendations/courses",
+      "method": "GET",
+      "headers": {
+        "Authorization": "Bearer {authToken}"
+      },
+      "timeout": 30000
+    },
+    {
+      "id": "loan_handler",
+      "type": "APICallNode",
+      "label": "Loan Eligibility Check",
+      "description": "Call backend loan eligibility endpoint",
+      "input": ["router_1"],
+      "endpoint": "http://localhost:8000/api/loans/eligibility-check",
+      "method": "POST",
+      "headers": {
+        "Authorization": "Bearer {authToken}",
+        "Content-Type": "application/json"
+      }
+    },
+    {
+      "id": "roi_handler",
+      "type": "APICallNode",
+      "label": "ROI Calculator API",
+      "description": "Calculate ROI for courses",
+      "input": ["router_1"],
+      "endpoint": "http://localhost:8000/api/recommendations/roi",
+      "method": "POST",
+      "headers": {
+        "Authorization": "Bearer {authToken}",
+        "Content-Type": "application/json"
+      }
+    },
+    {
+      "id": "llm_1",
+      "type": "GroqLLM",
+      "label": "Groq LLM (mixtral-8x7b)",
+      "description": "Call Groq API for natural language processing",
+      "model": "mixtral-8x7b-32768",
+      "temperature": 0.7,
+      "maxTokens": 2048,
+      "systemPrompt": "You are a helpful AI assistant for students seeking international education and financing guidance. You have access to a database of universities and courses worldwide. Always provide accurate, helpful information about programs, costs, ROI, and financing options. Be encouraging but realistic about opportunities."
+    },
+    {
+      "id": "rag_1",
+      "type": "RAGNode",
+      "label": "RAG Search (Course Knowledge Base)",
+      "description": "Semantic search over course descriptions and university info",
+      "input": ["input_1"],
+      "vectorDb": "chromadb",
+      "collection": "student_knowledge_base",
+      "topK": 5,
+      "minScore": 0.3
+    },
+    {
+      "id": "formatter_1",
+      "type": "FormatterNode",
+      "label": "Format Response",
+      "description": "Format LLM response for display",
+      "input": ["llm_1"],
+      "format": "markdown",
+      "includeMetadata": true
+    },
+    {
+      "id": "output_1",
+      "type": "CustomOutput",
+      "label": "Chat Response",
+      "description": "Send response back to user",
+      "input": ["formatter_1"]
+    }
+  ],
+  "connections": [
+    {
+      "source": "input_1",
+      "target": "router_1"
+    },
+    {
+      "source": "input_1",
+      "target": "rag_1"
+    },
+    {
+      "source": "router_1",
+      "target": "course_handler",
+      "condition": "intent == 'course_recommendation'"
+    },
+    {
+      "source": "router_1",
+      "target": "loan_handler",
+      "condition": "intent == 'loan_inquiry'"
+    },
+    {
+      "source": "router_1",
+      "target": "roi_handler",
+      "condition": "intent == 'roi_calculation'"
+    },
+    {
+      "source": ["input_1", "rag_1", "course_handler", "loan_handler", "roi_handler"],
+      "target": "llm_1"
+    },
+    {
+      "source": "llm_1",
+      "target": "formatter_1"
+    },
+    {
+      "source": "formatter_1",
+      "target": "output_1"
+    }
+  ],
+  "settings": {
+    "baseURL": "http://localhost:8000/api",
+    "timeout": 30000,
+    "retryAttempts": 3,
+    "loggingLevel": "info",
+    "rateLimit": {
+      "enabled": true,
+      "maxRequests": 100,
+      "windowMs": 60000
+    }
+  },
+  "knowledgeSources": [
+    {
+      "name": "Course Descriptions",
+      "type": "chromadb_collection",
+      "collection": "student_knowledge_base",
+      "updateFrequency": "daily",
+      "source": "backend_api"
+    },
+    {
+      "name": "University Profiles",
+      "type": "chromadb_collection",
+      "collection": "university_profiles",
+      "updateFrequency": "weekly",
+      "source": "backend_api"
+    }
+  ],
+  "features": [
+    {
+      "name": "Course Discovery",
+      "enabled": true,
+      "endpoint": "/recommendations/courses"
+    },
+    {
+      "name": "Loan Eligibility",
+      "enabled": true,
+      "endpoint": "/loans/eligibility-check"
+    },
+    {
+      "name": "ROI Calculation",
+      "enabled": true,
+      "endpoint": "/recommendations/roi"
+    },
+    {
+      "name": "Career Guidance",
+      "enabled": true,
+      "endpoint": "/recommendations/career-navigator"
+    },
+    {
+      "name": "Document Upload",
+      "enabled": true,
+      "supportedFormats": ["pdf", "docx", "jpg", "png"]
+    }
+  ],
+  "analytics": {
+    "enabled": true,
+    "trackUserInteractions": true,
+    "trackAPIPerformance": true,
+    "trackChatMetrics": true
+  }
+}

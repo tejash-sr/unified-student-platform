@@ -1,0 +1,219 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+.npm
+.eslintcache
+.node_repl_history
+.yarn-integrity
+dist/
+build/
+
+# Next.js
+.next/
+.vercel
+out/
+next-env.d.ts
+
+# React Native
+.gradle
+local.properties
+*.jks
+*.keystore
+.DS_Store
+.idea/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.production.local
+.env.development.local
+.env.test.local
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.AppleDouble
+.LSOverride
+Thumbs.db
+.directory
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+lerna-debug.log*
+npm-lerna-debug.log*
+
+# Misc
+.cache/
+.parcel-cache/
+dist/
+.cache/
+.vuepress/dist
+.serverless/
+.fusebox/
+.dynamodb/
+.tern-port
+.env.local
+.env.*.local
+
+# Virtual environments
+venv/
+env/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Backend specific
+backend/.env
+backend/app/__pycache__/
+backend/app/core/__pycache__/
+backend/app/models/__pycache__/
+backend/app/routes/__pycache__/
+backend/app/agents/__pycache__/
+backend/app/services/__pycache__/
+backend/app/utils/__pycache__/
+backend/*.db
+backend/logs/
+backend/instance/
+
+# Frontend specific
+frontend/.next/
+frontend/out/
+frontend/.vercel
+frontend/node_modules/
+frontend/.env.local
+frontend/.env.*.local
+
+# Mobile specific
+mobile/node_modules/
+mobile/build/
+mobile/.expo/
+mobile/.expo-shared/
+mobile/dist/
+mobile/npm-debug.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+postgres_data/
+pgdata/
+
+# Flowise
+flowise/node_modules/
+flowise/logs/
+flowise/.env
+
+# N8N
+n8n/node_modules/
+n8n/.env
+
+# MacOS
+.AppleDouble
+.LSOverride
+*.swp
+.DS_Store
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+.backup/
+
+# IDE settings (don't commit)
+.vscode/settings.json
+.vscode/launch.json
+.vscode/extensions.json
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Test reports
+coverage/
+.nyc_output/
+junit.xml
+test-results/
+
+# Build files
+build/
+dist/
+.next/
+out/
+
+# Documentation
+site/
+docs/_build/
